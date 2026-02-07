@@ -1,8 +1,9 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/shared/api/supabase-server';
 import { VStack, HStack, Typography, Button } from '@/shared/ui';
 import { InviteLinkCopy } from '@/features/station/ui/invite-link-copy';
 import { DashboardList, calculateMemberStats } from '@/features/dashboard';
+import { ManualEntryForm } from '@/features/manual-entry';
 
 interface StationPageProps {
   params: Promise<{ id: string }>;
@@ -19,6 +20,9 @@ export default async function StationPage({ params }: StationPageProps) {
     .single();
 
   if (!station) notFound();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
 
   // 병렬로 데이터 fetching
   const [membersResult, gameParticipantsResult, manualEntriesResult] = await Promise.all([
@@ -113,6 +117,24 @@ export default async function StationPage({ params }: StationPageProps) {
               </Button>
             </a>
           </HStack>
+        </VStack>
+
+        {/* 수동 도파민 입력 */}
+        <VStack gap={12} className="w-full">
+          <Typography variants="h3_bold" as="h2">
+            수동 입력
+          </Typography>
+          <ManualEntryForm
+            stationId={id}
+            currentUserId={user.id}
+            members={(members as { user_id: string; users: unknown }[]).map((m) => {
+              const u = m.users as { nickname: string } | null;
+              return {
+                userId: m.user_id,
+                nickname: u?.nickname ?? '알 수 없음',
+              };
+            })}
+          />
         </VStack>
       </VStack>
     </main>
