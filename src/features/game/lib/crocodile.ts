@@ -14,13 +14,24 @@ export interface CrocodileState {
   loserId: string | null;
 }
 
+/** 안전한 랜덤 인덱스 생성 (브라우저 crypto API 우선) */
+export function generateTrapIndex(teethCount: number): number {
+  if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues) {
+    const array = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(array);
+    return array[0] % teethCount;
+  }
+  return Math.floor(Math.random() * teethCount);
+}
+
 export function initCrocodileGame(
   players: CrocodilePlayer[],
   teethCount = DEFAULT_TEETH_COUNT,
+  trapIndex?: number,
 ): CrocodileState {
   return {
     teethCount,
-    trapIndex: Math.floor(Math.random() * teethCount),
+    trapIndex: trapIndex ?? generateTrapIndex(teethCount),
     pressedTeeth: new Set(),
     currentPlayerIndex: 0,
     players,

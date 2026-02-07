@@ -35,7 +35,9 @@ export function RandomPickBoard({
   const loser = participants.find((p) => p.userId === loserId);
 
   const startSpin = () => {
-    targetRef.current = Math.floor(Math.random() * participants.length);
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    targetRef.current = array[0] % participants.length;
     setPhase('spinning');
   };
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { VStack, HStack, Typography, Button } from '@/shared/ui';
 import { formatDopamine } from '@/shared/lib/utils';
 import { initCrocodileGame, pressTooth, isGameOver } from '../lib/crocodile';
@@ -20,11 +20,24 @@ export function CrocodileBoard({
   betAmount,
   onComplete,
 }: CrocodileBoardProps) {
-  const [game, setGame] = useState<CrocodileState>(() =>
-    initCrocodileGame(participants),
-  );
+  const [game, setGame] = useState<CrocodileState | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // 클라이언트 마운트 후에만 랜덤 초기화 (SSR에서 결정론적 값 방지)
+  useEffect(() => {
+    setGame(initCrocodileGame(participants));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!game) {
+    return (
+      <VStack gap={20} className="w-full items-center">
+        <Typography variants="body1" className="text-muted-foreground animate-pulse">
+          게임 준비 중...
+        </Typography>
+      </VStack>
+    );
+  }
 
   const currentPlayer = game.players[game.currentPlayerIndex];
   const gameOver = isGameOver(game);
