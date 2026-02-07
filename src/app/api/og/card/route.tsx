@@ -1,6 +1,6 @@
 import { ImageResponse } from '@vercel/og';
 import { NextRequest } from 'next/server';
-import { createClient } from '@/shared/api/supabase-server';
+import { createAdminClient } from '@/shared/api/supabase-admin';
 import { calculateMemberStats } from '@/features/dashboard';
 import { getTeaseMent, getTeaseEmoji } from '@/features/share-card/lib/ments';
 
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     return new Response('Missing userId or stationId', { status: 400 });
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // 병렬로 데이터 fetching
   const [stationResult, membersResult, gameResult, manualResult, userResult] = await Promise.all([
