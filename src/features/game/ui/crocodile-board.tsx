@@ -48,7 +48,7 @@ export function CrocodileBoard({
   const handlePressTooth = (index: number) => {
     if (gameOver) return;
     setGame((prev) => {
-      if (prev.pressedTeeth.has(index)) return prev;
+      if (!prev || prev.pressedTeeth.has(index)) return prev;
       return pressTooth(prev, index);
     });
   };
