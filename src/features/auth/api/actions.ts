@@ -4,15 +4,20 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { createClient } from '@/shared/api/supabase-server';
 
-export async function signInWithKakao() {
+export async function signInWithKakao(redirectAfterLogin?: string) {
   const supabase = await createClient();
   const headerList = await headers();
   const origin = headerList.get('origin') || process.env.NEXT_PUBLIC_SITE_URL;
 
+  let callbackUrl = `${origin}/auth/callback`;
+  if (redirectAfterLogin) {
+    callbackUrl += `?next=${encodeURIComponent(redirectAfterLogin)}`;
+  }
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'kakao',
     options: {
-      redirectTo: `${origin}/auth/callback`,
+      redirectTo: callbackUrl,
       scopes: 'profile_nickname profile_image',
     },
   });

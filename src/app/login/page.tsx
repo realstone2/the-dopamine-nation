@@ -1,7 +1,13 @@
 import { KakaoLoginButton } from '@/features/auth';
 import { VStack, Typography } from '@/shared/ui';
 
-export default function LoginPage() {
+interface LoginPageProps {
+  searchParams: Promise<{ redirect?: string }>;
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { redirect } = await searchParams;
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-background">
       <VStack gap={24} className="w-full max-w-sm px-6">
@@ -15,7 +21,7 @@ export default function LoginPage() {
             당신들의 통계를 만들어드립니다
           </Typography>
         </VStack>
-        <KakaoLoginButton />
+        <KakaoLoginButton redirectAfterLogin={redirect} />
       </VStack>
     </main>
   );

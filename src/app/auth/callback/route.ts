@@ -24,7 +24,10 @@ export async function GET(request: Request) {
         { onConflict: 'id' },
       );
 
-      return NextResponse.redirect(`${origin}/`);
+      // 로그인 전 페이지로 리다이렉트 (open redirect 방지: 상대 경로만 허용)
+      const next = searchParams.get('next') || '/';
+      const redirectPath = next.startsWith('/') ? next : '/';
+      return NextResponse.redirect(`${origin}${redirectPath}`);
     }
   }
 
