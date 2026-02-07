@@ -131,4 +131,32 @@ describe('Game CRUD + RLS', () => {
     expect(sessions!.length).toBeGreaterThanOrEqual(1);
     expect(sessions![0].bet_amount).toBe(1000);
   });
+
+  it('비멤버가 게임 세션 생성 시도 → RLS 차단', async () => {
+    const { error } = await userC.client
+      .from('game_sessions')
+      .insert({
+        station_id: stationIds[0],
+        game_type_id: gameTypeId,
+        bet_amount: 500,
+        status: 'completed',
+        created_by: userC.id,
+      });
+
+    expect(error).toBeTruthy();
+  });
+
+  it('bet_amount <= 0 시 DB 체크 제약 위반', async () => {
+    const { error } = await userA.client
+      .from('game_sessions')
+      .insert({
+        station_id: stationIds[0],
+        game_type_id: gameTypeId,
+        bet_amount: 0,
+        status: 'completed',
+        created_by: userA.id,
+      });
+
+    expect(error).toBeTruthy();
+  });
 });
