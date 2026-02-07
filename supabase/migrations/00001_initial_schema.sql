@@ -77,6 +77,43 @@ create table public.manual_entries (
 );
 
 -- ============================================================
+-- SECURITY DEFINER 헬퍼 함수 (RLS 무한재귀 방지)
+-- ============================================================
+
+-- 내가 속한 station_id 목록
+CREATE OR REPLACE FUNCTION public.get_my_station_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT station_id FROM station_members WHERE user_id = auth.uid();
+$$;
+
+-- 내가 owner인 station_id 목록
+CREATE OR REPLACE FUNCTION public.get_my_owned_station_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT station_id FROM station_members WHERE user_id = auth.uid() AND role = 'owner';
+$$;
+
+-- 초대 코드로 station_id 조회 (비멤버도 가능)
+CREATE OR REPLACE FUNCTION public.get_station_id_by_invite_code(code text)
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+  SELECT id FROM stations WHERE invite_code = code LIMIT 1;
+$$;
+
+-- ============================================================
 -- RLS (Row Level Security) 정책
 -- ============================================================
 
@@ -101,43 +138,38 @@ create policy "users_select_station_members" on public.users
   for select using (
     id in (
       select sm.user_id from public.station_members sm
-      where sm.station_id in (
-        select sm2.station_id from public.station_members sm2
-        where sm2.user_id = auth.uid()
-      )
+      where sm.station_id in (select public.get_my_station_ids())
     )
   );
 
 -- stations: 멤버만 조회
 create policy "stations_select_member" on public.stations
-  for select using (
-    id in (select station_id from public.station_members where user_id = auth.uid())
-  );
+  for select using (id in (select public.get_my_station_ids()));
+
+-- stations: 생성자도 조회 가능 (INSERT RETURNING 지원, OR 평가)
+create policy "stations_select_creator" on public.stations
+  for select using (auth.uid() = created_by);
 
 -- stations: 인증된 유저 생성 가능
 create policy "stations_insert_auth" on public.stations
   for insert with check (auth.uid() = created_by);
 
--- stations: owner만 수정
+-- stations: owner만 수정/삭제
 create policy "stations_update_owner" on public.stations
-  for update using (
-    id in (
-      select station_id from public.station_members
-      where user_id = auth.uid() and role = 'owner'
-    )
-  );
+  for update using (id in (select public.get_my_owned_station_ids()));
+create policy "stations_delete_owner" on public.stations
+  for delete using (id in (select public.get_my_owned_station_ids()));
 
--- station_members: 멤버 조회
+-- station_members: 헬퍼 함수로 셀프참조 제거
 create policy "station_members_select" on public.station_members
-  for select using (
-    station_id in (
-      select station_id from public.station_members where user_id = auth.uid()
-    )
-  );
-
--- station_members: 인증된 유저 가입 가능
+  for select using (station_id in (select public.get_my_station_ids()));
 create policy "station_members_insert" on public.station_members
   for insert with check (auth.uid() = user_id);
+create policy "station_members_delete" on public.station_members
+  for delete using (
+    user_id = auth.uid()
+    or station_id in (select public.get_my_owned_station_ids())
+  );
 
 -- game_types: 누구나 읽기 가능
 create policy "game_types_select_all" on public.game_types
@@ -145,93 +177,36 @@ create policy "game_types_select_all" on public.game_types
 
 -- game_sessions: 스테이션 멤버만 조회/생성
 create policy "game_sessions_select" on public.game_sessions
-  for select using (
-    station_id in (
-      select station_id from public.station_members where user_id = auth.uid()
-    )
-  );
+  for select using (station_id in (select public.get_my_station_ids()));
 create policy "game_sessions_insert" on public.game_sessions
-  for insert with check (
-    station_id in (
-      select station_id from public.station_members where user_id = auth.uid()
-    )
-  );
+  for insert with check (station_id in (select public.get_my_station_ids()));
 create policy "game_sessions_update" on public.game_sessions
-  for update using (
-    station_id in (
-      select station_id from public.station_members where user_id = auth.uid()
-    )
-  );
+  for update using (station_id in (select public.get_my_station_ids()));
+create policy "game_sessions_delete" on public.game_sessions
+  for delete using (created_by = auth.uid());
 
 -- game_participants: 세션의 스테이션 멤버만
 create policy "game_participants_select" on public.game_participants
   for select using (
     session_id in (
       select gs.id from public.game_sessions gs
-      join public.station_members sm on gs.station_id = sm.station_id
-      where sm.user_id = auth.uid()
+      where gs.station_id in (select public.get_my_station_ids())
     )
   );
 create policy "game_participants_insert" on public.game_participants
   for insert with check (
     session_id in (
       select gs.id from public.game_sessions gs
-      join public.station_members sm on gs.station_id = sm.station_id
-      where sm.user_id = auth.uid()
+      where gs.station_id in (select public.get_my_station_ids())
     )
   );
 create policy "game_participants_update" on public.game_participants
   for update using (
     session_id in (
       select gs.id from public.game_sessions gs
-      join public.station_members sm on gs.station_id = sm.station_id
-      where sm.user_id = auth.uid()
+      where gs.station_id in (select public.get_my_station_ids())
     )
   );
-
--- manual_entries: 스테이션 멤버만
-create policy "manual_entries_select" on public.manual_entries
-  for select using (
-    station_id in (
-      select station_id from public.station_members where user_id = auth.uid()
-    )
-  );
-create policy "manual_entries_insert" on public.manual_entries
-  for insert with check (
-    station_id in (
-      select station_id from public.station_members where user_id = auth.uid()
-    )
-    and auth.uid() = from_user
-  );
-
--- ============================================================
--- DELETE 정책
--- ============================================================
-
--- stations: owner만 삭제
-create policy "stations_delete_owner" on public.stations
-  for delete using (
-    id in (
-      select station_id from public.station_members
-      where user_id = auth.uid() and role = 'owner'
-    )
-  );
-
--- station_members: 본인 탈퇴 또는 owner가 멤버 제거
-create policy "station_members_delete" on public.station_members
-  for delete using (
-    user_id = auth.uid()
-    or station_id in (
-      select station_id from public.station_members
-      where user_id = auth.uid() and role = 'owner'
-    )
-  );
-
--- game_sessions: 생성자만 삭제 (pending 상태일 때만 앱에서 제어)
-create policy "game_sessions_delete" on public.game_sessions
-  for delete using (created_by = auth.uid());
-
--- game_participants: 세션 생성자만 삭제
 create policy "game_participants_delete" on public.game_participants
   for delete using (
     session_id in (
@@ -239,7 +214,14 @@ create policy "game_participants_delete" on public.game_participants
     )
   );
 
--- manual_entries: 작성자만 삭제
+-- manual_entries: 스테이션 멤버만
+create policy "manual_entries_select" on public.manual_entries
+  for select using (station_id in (select public.get_my_station_ids()));
+create policy "manual_entries_insert" on public.manual_entries
+  for insert with check (
+    station_id in (select public.get_my_station_ids())
+    and auth.uid() = from_user
+  );
 create policy "manual_entries_delete" on public.manual_entries
   for delete using (auth.uid() = from_user);
 

@@ -51,14 +51,13 @@ export async function joinStationByInviteCode(inviteCode: string) {
 
   if (!user) throw new Error('인증이 필요합니다');
 
-  // 초대 코드로 스테이션 찾기
-  const { data: station, error: stationError } = await supabase
-    .from('stations')
-    .select('id')
-    .eq('invite_code', inviteCode)
-    .single();
+  // 초대 코드로 스테이션 찾기 (RPC: 비멤버도 조회 가능)
+  const { data: stationId, error: stationError } = await supabase
+    .rpc('get_station_id_by_invite_code', { code: inviteCode });
 
-  if (stationError || !station) throw new Error('유효하지 않은 초대 코드입니다');
+  if (stationError || !stationId) throw new Error('유효하지 않은 초대 코드입니다');
+
+  const station = { id: stationId as string };
 
   // 이미 멤버인지 확인
   const { data: existing } = await supabase

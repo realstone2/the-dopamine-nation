@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/shared/api/supabase-server';
 
 export async function GET(request: Request) {
+  console.log('🚀 ~ GET ~ request.url:', request.url);
   const { searchParams, origin } = new URL(request.url);
+  console.log('🚀 ~ GET ~ origin:', origin);
   const code = searchParams.get('code');
 
   if (code) {
@@ -19,7 +21,7 @@ export async function GET(request: Request) {
           nickname: kakaoMetadata?.full_name ?? kakaoMetadata?.name ?? '도파민러',
           avatar_url: kakaoMetadata?.avatar_url ?? null,
         },
-        { onConflict: 'id' }
+        { onConflict: 'id' },
       );
 
       return NextResponse.redirect(`${origin}/`);
