@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/shared/api/supabase-server';
 import { VStack, HStack, Typography, Button } from '@/shared/ui';
 import { InviteLinkCopy } from '@/features/station/ui/invite-link-copy';
+import { StationActions } from '@/features/station';
 import { DashboardList, calculateMemberStats } from '@/features/dashboard';
 import { ManualEntryForm } from '@/features/manual-entry';
 import { ShareCardList } from '@/features/share-card';
@@ -56,6 +57,11 @@ export default async function StationPage({ params }: StationPageProps) {
     to_user: string;
     amount: number;
   }[];
+
+  const currentMember = members.find(
+    (m: { user_id: string }) => m.user_id === user.id,
+  ) as { role: string } | undefined;
+  const isOwner = currentMember?.role === 'owner';
 
   const memberStats = calculateMemberStats(
     members as {
@@ -152,6 +158,9 @@ export default async function StationPage({ params }: StationPageProps) {
             }))}
           />
         </VStack>
+
+        {/* 스테이션 관리 */}
+        <StationActions stationId={id} isOwner={isOwner} />
       </VStack>
     </main>
   );
