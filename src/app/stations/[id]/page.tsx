@@ -4,6 +4,7 @@ import { VStack, HStack, Typography, Button } from '@/shared/ui';
 import { InviteLinkCopy } from '@/features/station/ui/invite-link-copy';
 import { DashboardList, calculateMemberStats } from '@/features/dashboard';
 import { ManualEntryForm } from '@/features/manual-entry';
+import { ShareCardList } from '@/features/share-card';
 
 interface StationPageProps {
   params: Promise<{ id: string }>;
@@ -134,6 +135,21 @@ export default async function StationPage({ params }: StationPageProps) {
                 nickname: u?.nickname ?? '알 수 없음',
               };
             })}
+          />
+        </VStack>
+
+        {/* 놀림 카드 공유 */}
+        <VStack gap={12} className="w-full">
+          <Typography variants="h3_bold" as="h2">
+            놀림 카드
+          </Typography>
+          <ShareCardList
+            stationId={id}
+            memberStats={memberStats.map((s) => ({
+              userId: s.userId,
+              nickname: s.nickname,
+              totalBalance: s.totalBalance,
+            }))}
           />
         </VStack>
       </VStack>
