@@ -96,10 +96,23 @@ export default async function StationPage({ params }: StationPageProps) {
           <DashboardList memberStats={memberStats} />
         </VStack>
 
-        <VStack gap={8} className="w-full">
-          <Typography variants="body2" className="text-muted-foreground text-center">
-            게임 기능은 곧 추가됩니다
+        {/* 게임 시작 */}
+        <VStack gap={12} className="w-full">
+          <Typography variants="h3_bold" as="h2">
+            게임하기
           </Typography>
+          <HStack gap={8} className="w-full">
+            <a href={`/stations/${id}/game/crocodile`} className="flex-1">
+              <Button variant="outline" className="w-full h-20 text-lg">
+                악어이빨
+              </Button>
+            </a>
+            <a href={`/stations/${id}/game/random-pick`} className="flex-1">
+              <Button variant="outline" className="w-full h-20 text-lg">
+                랜덤뽑기
+              </Button>
+            </a>
+          </HStack>
         </VStack>
       </VStack>
     </main>
